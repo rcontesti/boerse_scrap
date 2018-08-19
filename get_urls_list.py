@@ -22,16 +22,16 @@ urls=['http://en.boerse-frankfurt.de/searchresults?_search=argentinien&p=1',
 'http://en.boerse-frankfurt.de/searchresults?_search=argentinien&p=2']
 
 
-r  = requests.get(url)
-xpath="""//*[@id="main-wrapper"]/div[5]/div/div/div[2]/div[2]/table"""
 
 
-soup = BeautifulSoup(data.text,'lxml').findAll('')
-trs=BeautifulSoup(html,'lxml').find('table', {'class':"table"}).findAll('tr')
 
-print(trs)
-
-"""for tr in trs:
-    row=[]
-    for td in tr.findAll('td')[0:5]: row.append(td.text)
-    if len(row)>0:table.append(row)"""
+bond_urls=[]
+for url in urls:
+    r  = requests.get(url)
+    for table in BeautifulSoup(r.text,'lxml').findAll('table'):
+        for row in table.findAll('tr'):
+            for col in row.findAll('td'):
+                for a in col.findAll('a', href=True):
+                    if a.text:
+                        if a['href'][0:8]=='/bonds/A':
+                            bond_urls.append(a['href'])

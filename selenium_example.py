@@ -4,12 +4,13 @@ La idea es meter una serie de precios de bonos en un diccionario:
 
 prices={"BP28": Dataframe(), "...": ...}
 
-#TODO: La pagina demora al proposito la carga de los precios historicos asi no
-los scrapeo. Funciono las primeras veces y despues demora cada vez mas.
-Seguramente por un tema de IP
+#TODO: Calculate YTM and MD
+#TODO: Nice to have: Only download the prices I need
 """
 #-------------------------------------------------------------------------------
+
 #--LIBRARIES--------------------------------------------------------------------
+
 #-------------------------------------------------------------------------------
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
@@ -21,9 +22,12 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import pickle
 import pandas as pd
-
+from dateutil.parser import parse
+import matplotlib.pyplot as plt
 #-------------------------------------------------------------------------------
+
 #--FUNCTIONS--------------------------------------------------------------------
+
 #-------------------------------------------------------------------------------
 
 def test_browser(url, driver_loc):
@@ -85,17 +89,24 @@ def append_new_data(prices_new, prices_old):
             dates_new_max=prices_new[key_new]['Date'].max()
             if dates_new_max>dates_old_max:
                 new_part=prices_new[key_new][prices_new[key_new]['Date']>dates_old_max]
-                prices_old[key_new]=pd.concat(prices_old[key_new], new_part)
+                prices_old[key_new]=prices_old[key_new].append(new_part)
             elif dates_new_min<dates_old_min:
                 new_part=prices_new[key_new][prices_new[key_new]['Date']<dates_old_min]
-                prices_old[key_new]=pd.concat(prices_old[key_new], new_part)
+                prices_old[key_new]=prices_old[key_new].append(new_part)
             else:
                 pass
     pickle.dump(prices_old, open('prices.p', 'wb'))
-#-------------------------------------------------------------------------------
-#--PARAMS-----------------------------------------------------------------------
+
+def format_dataframes(df):
+    df[['Open','High', 'Low', 'Close']]=df[['Open','High', 'Low', 'Close']].replace('','0.0')
+    df[['Open','High', 'Low', 'Close']]=df[['Open','High', 'Low', 'Close']].applymap(lambda x:  float(x))
+    df['Date']=df['Date'].apply(lambda x: parse(x, dayfirst=True))
+    return df
 #-------------------------------------------------------------------------------
 
+#--PARAMS-----------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
 driver_loc='/home/rcontesti/Downloads/chromedriver'
 
 bue_urls={
@@ -110,11 +121,33 @@ gov_arg_bonds_urls={
 first_date="1.1.2013"
 last_date="1.9.2018"
 #-------------------------------------------------------------------------------
-prices_new=get_prices_dic(bue_urls, first_date, last_date)
+
+#--Calculations-----------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+
+prices_new=get_prices_dic(gov_arg_bonds_urls, first_date, last_date)
 prices_old=pickle.load(open('prices.p', 'rb'))
 append_new_data(prices_new, prices_old)
 
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#def calculate ytm
+prices=pickle.load(open('prices.p', 'rb'))
+cf=pickle.load(open('cash_flows.p','rb'))
+prices.keys()
+cf.keys()
+
+bond='AE48'
+df=format_dataframes(prices[bond].copy())
+price=df['Close'].iloc[0]
+calc_date=df['Date'].iloc[0]
+cf=pd.DataFrame(cf['AE48'])
+cf['Date']>calc_date
+#cd['days']calculate datedif days360() between cf['Date'] and calc_date in days
+#dcf=cf/((1+r)**(days/360))
+#error=price-(sum(dcf)+accrued_interest)
+#scipy.optimize.newton
 
 
-print(prices_old['BP28']['Date'].iloc[0])
-print(prices_old['BP28']['Date'].iloc[-1])
+#---------------------------------------------------------------------------
